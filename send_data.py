@@ -1,20 +1,30 @@
 import sys
 import os
 import serial
-import time
+import picamera
+from picamera import PiCamera
+from time import sleep
 
-def read_data(addr="/dev/ttyUSB0"):
-    ser = serial.Serial(addr, 9600)
+_DATA_DIR = "/home/pi/Repos/shiftry-pi/data/"
+
+def read_data(ser):
+
+    #do a reading to clear any stale data
+    try:
+        buffer = ser.readline().decode('utf-8')
+    except UnicodeDecodeError:
+        print("Warning: UnicodeDecodeError while buffering")
 
     reading = ser.readline().decode('utf-8')
     tok = reading.split()
+    print(tok)
     if len(tok) != 2:
-        return ""
+        return (-1,-1) 
     return tok
 
 
 def append_data(filename, d):
-    f = open("data/" + filename + ".txt","r")
+    f = open(_DATA_DIR + filename + ".txt","r")
     #fl = f.readlines()
     print("reading file..")
     fstr = f.read()
@@ -24,8 +34,8 @@ def append_data(filename, d):
     f.close()
 
     print("writing file..")
-    fr = open("data/" + filename + ".txt", "w+")
-    fw = open("data/" + filename + ".js", "w+")
+    fr = open(_DATA_DIR + filename + ".txt", "w+")
+    fw = open(_DATA_DIR + filename + ".js", "w+")
     fw.write(filename + "_data = [\n") 
 
     for i in range(1,len(data48)):
@@ -39,9 +49,23 @@ def append_data(filename, d):
     #for ln in fl:
     #    print(ln[-2])
 
+def take_picture(filename = "photo.jpg"):
+    camera = PiCamera()
+    camera.rotation = 270
+    camera.start_preview()
+    sleep(2)
+    print("capturing photo..")
+    try:
+        camera.capture(_DATA_DIR + filename)
+    except picamera.exc.PiCameraRuntimeError:
+        print("There was an error capturing the photo")
+    finally:
+        camera.stop_preview()
+        camera.close()
+
 def scp_cmd(pemfile, filename, remotehost, remotedir):
     print("sending file..")
-    cmd = 'scp -i %s data/%s.js %s:%s' % (pemfile, filename, remotehost, remotedir)
+    cmd = 'scp -i %s %s%s %s:%s' % (pemfile, _DATA_DIR, filename, remotehost, remotedir)
     print(cmd)
     os.system(cmd)
 
@@ -50,25 +74,32 @@ def main():
     if len(sys.argv) != 4:
         print("Need to supply paramters: 1. .pem file 2. scp address 3. remote dir")
         exit()
-    for i in range(1,len(sys.argv)):
-        print("param " + str(i) + ": " + sys.argv[i])
+    #for i in range(1,len(sys.argv)):
+    #    print("param " + str(i) + ": " + sys.argv[i])
 
     pemfile = sys.argv[1]
     remotehost = sys.argv[2]
     remotedir = sys.argv[3]
+    
+    addr="/dev/ttyUSB0"
+    ser = serial.Serial(addr, 9600)
 
     while True:
         #read data here
-        d_hum, d_temp = read_data()
+        d_hum, d_temp = read_data(ser)
+        if d_hum != -1:
+            break
 
-        append_data("humidity", d_hum)
-        append_data("temperature", d_temp)
+    take_picture("photo.jpg")
 
-        scp_cmd(pemfile, "humidity", remotehost, remotedir)
-        scp_cmd(pemfile, "temperature", remotehost, remotedir)
+    append_data("humidity", d_hum)
+    append_data("temperature", d_temp)
 
-        time.sleep(3600)
+    scp_cmd(pemfile, "humidity.js", remotehost, remotedir)
+    scp_cmd(pemfile, "temperature.js", remotehost, remotedir)
+    scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
 
+    ser.close()
 
 if __name__ == "__main__":
     main()
