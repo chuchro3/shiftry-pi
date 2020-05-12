@@ -133,7 +133,7 @@ def main():
 
     delta_hum  = abs( float(prev_hum)  - float(d_hum)  )
     delta_temp = abs( float(prev_temp) - float(d_temp) )
-    delay = int( max(10, 35 - (delta_temp**(5/3) / 2) - (delta_hum / 2)) )
+    delay = int( max(10, 23 - delta_temp - (delta_hum / 2)) )
     setHeartbeat(time + datetime.timedelta(minutes=delay))
 
 if __name__ == "__main__":
