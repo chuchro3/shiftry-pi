@@ -46,6 +46,7 @@ def append_data(filename, d):
 
     fr.close()
     fw.close()
+    return data48[-1]
 
 def take_picture(filename = "photo.jpg"):
     camera = PiCamera()
@@ -118,8 +119,8 @@ def main():
         take_picture("photo.jpg")
         scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
 
-    append_data("humidity", d_hum)
-    append_data("temperature", d_temp)
+    prev_hum = append_data("humidity", d_hum)
+    prev_temp = append_data("temperature", d_temp)
     append_data("moisture", d_moist)
     append_data("time", '\"' + time.strftime("%m/%d/%Y, %I:%M:%S %p") + '\"')
 
@@ -130,7 +131,10 @@ def main():
 
     ser.close()
 
-    setHeartbeat(time + datetime.timedelta(minutes=20))
+    delta_hum  = abs( float(prev_hum)  - float(d_hum)  )
+    delta_temp = abs( float(prev_temp) - float(d_temp) )
+    delay = int( max(10, 35 - (delta_temp**(5/3) / 2) - (delta_hum / 2)) )
+    setHeartbeat(time + datetime.timedelta(minutes=delay))
 
 if __name__ == "__main__":
     main()
