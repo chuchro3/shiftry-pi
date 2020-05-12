@@ -1,6 +1,7 @@
 import sys
 import os
 import serial
+import datetime
 import picamera
 from picamera import PiCamera
 from time import sleep
@@ -28,7 +29,7 @@ def append_data(filename, d):
     #print("reading file..")
     fstr = f.read()
     idx = 1
-    data48 = fstr.split()
+    data48 = fstr.split('\n')[:200]
     #print(data48)
     f.close()
 
@@ -51,7 +52,7 @@ def take_picture(filename = "photo.jpg"):
     camera.rotation = 270
     camera.start_preview()
     sleep(2)
-    #print("capturing photo..")
+    print("capturing photo..")
     try:
         camera.capture(_DATA_DIR + filename)
     except picamera.exc.PiCameraRuntimeError:
@@ -66,8 +67,26 @@ def scp_cmd(pemfile, filename, remotehost, remotedir):
     #print(cmd)
     os.system(cmd)
 
+def getHeartbeat():
+    
+    with open(_DATA_DIR + "heartbeat.txt", "r") as f:
+        date_str = f.read().strip()
+        time = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S.%f')
+    return time
+
+def setHeartbeat(time):
+
+    with open(_DATA_DIR + "heartbeat.txt", "w+") as f:
+        f.write(str(time))
+
 #python3 send_data.py /Users/robertchuchro/.ssh/shiftry.pem ec2-user@52.10.49.156 /home/ec2-user/data
 def main():
+    time = datetime.datetime.now()
+    heartbeat = getHeartbeat()
+    if time < heartbeat:
+        print("Snoozing ... " + str(time))
+        exit()
+
     if len(sys.argv) != 4:
         print("Need to supply paramters: 1. .pem file 2. scp address 3. remote dir")
         exit()
@@ -94,19 +113,24 @@ def main():
         d_hum, d_temp, d_moist = read_data(ser)
         if d_hum != -1:
             break
-
-    take_picture("photo.jpg")
+    
+    if (time.hour == 9 and time.minute < 30):
+        take_picture("photo.jpg")
+        scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
 
     append_data("humidity", d_hum)
     append_data("temperature", d_temp)
     append_data("moisture", d_moist)
+    append_data("time", '\"' + time.strftime("%m/%d/%Y, %I:%M:%S %p") + '\"')
 
     scp_cmd(pemfile, "humidity.js", remotehost, remotedir)
     scp_cmd(pemfile, "temperature.js", remotehost, remotedir)
     scp_cmd(pemfile, "moisture.js", remotehost, remotedir)
-    scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
+    scp_cmd(pemfile, "time.js", remotehost, remotedir)
 
     ser.close()
+
+    setHeartbeat(time + datetime.timedelta(minutes=20))
 
 if __name__ == "__main__":
     main()
