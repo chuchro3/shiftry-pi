@@ -19,8 +19,8 @@ def read_data(ser):
     reading = ser.readline().decode('utf-8')
     tok = reading.split()
     print(tok)
-    if len(tok) != 3:
-        return (-1,-1,-1) 
+    if len(tok) != 4:
+        return (-1,-1,-1,-1) 
     return tok
 
 
@@ -105,13 +105,10 @@ def main():
     except serial.SerialException:
         print("Error: Could not open serial connection for reading")
         return
-    #except FileNotFoundError as e:
-    #    print(e.filename + " not found")
-    #    return
 
     while True:
         #read data here
-        d_hum, d_temp, d_moist = read_data(ser)
+        d_hum, d_temp, d_moist, d_soil_temp = read_data(ser)
         if d_hum != -1:
             break
     
@@ -121,11 +118,13 @@ def main():
 
     prev_hum = append_data("humidity", d_hum)
     prev_temp = append_data("temperature", d_temp)
+    prev_soil_temp = append_data("soil_temperature", d_soil_temp)
     append_data("moisture", d_moist)
     append_data("time", '\"' + time.strftime("%m/%d/%Y, %I:%M:%S %p") + '\"')
 
     scp_cmd(pemfile, "humidity.js", remotehost, remotedir)
     scp_cmd(pemfile, "temperature.js", remotehost, remotedir)
+    scp_cmd(pemfile, "soil_temperature.js", remotehost, remotedir)
     scp_cmd(pemfile, "moisture.js", remotehost, remotedir)
     scp_cmd(pemfile, "time.js", remotehost, remotedir)
 
