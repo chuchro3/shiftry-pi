@@ -24,7 +24,7 @@ def read_data(ser):
     return tok
 
 
-def append_data(filename, d):
+def append_data(filename, d, smoothen=False):
     f = open(_DATA_DIR + filename + ".txt","r")
     #print("reading file..")
     fstr = f.read()
@@ -32,6 +32,13 @@ def append_data(filename, d):
     data48 = fstr.split('\n')[:200]
     #print(data48)
     f.close()
+
+    if smoothen:
+        prev = float(data48[-1])
+        curr = float(d)
+        delta = abs(prev - curr)
+        if delta > 4.0:
+            d = str(.75*curr + .25*prev)
 
     #print("writing file..")
     fr = open(_DATA_DIR + filename + ".txt", "w+")
@@ -116,24 +123,26 @@ def main():
         take_picture("photo.jpg")
         scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
 
-    prev_hum = append_data("humidity", d_hum)
-    prev_temp = append_data("temperature", d_temp)
-    prev_soil_temp = append_data("soil_temperature", d_soil_temp)
-    append_data("moisture", d_moist)
-    append_data("time", '\"' + time.strftime("%m/%d/%Y, %I:%M:%S %p") + '\"')
+    prev_hum = append_data("humidity", d_humi, True)
+    prev_temp = append_data("temperature", d_temp, True)
+    prev_soil_temp = append_data("soil_temperature", d_soil_temp, False)
+    append_data("moisture", d_moist, False)
+    append_data("time", '\"' + time.strftime("%m/%d/%Y, %I:%M:%S %p") + '\"', False)
 
-    scp_cmd(pemfile, "humidity.js", remotehost, remotedir)
-    scp_cmd(pemfile, "temperature.js", remotehost, remotedir)
-    scp_cmd(pemfile, "soil_temperature.js", remotehost, remotedir)
-    scp_cmd(pemfile, "moisture.js", remotehost, remotedir)
-    scp_cmd(pemfile, "time.js", remotehost, remotedir)
 
     ser.close()
 
     delta_hum  = abs( float(prev_hum)  - float(d_hum)  )
     delta_temp = abs( float(prev_temp) - float(d_temp) )
-    delay = int( max(10, 23 - delta_temp - (delta_hum / 2)) )
+    delta_soil_temp = abs( float(prev_soil_temp) - float(d_soil_temp) )
+    delay = int( max(10, 24 - delta_temp - (delta_hum / 2) - delta_soil_temp) )
     setHeartbeat(time + datetime.timedelta(minutes=delay))
+    
+    scp_cmd(pemfile, "humidity.js", remotehost, remotedir)
+    scp_cmd(pemfile, "temperature.js", remotehost, remotedir)
+    scp_cmd(pemfile, "soil_temperature.js", remotehost, remotedir)
+    scp_cmd(pemfile, "moisture.js", remotehost, remotedir)
+    scp_cmd(pemfile, "time.js", remotehost, remotedir)
 
 if __name__ == "__main__":
     main()
