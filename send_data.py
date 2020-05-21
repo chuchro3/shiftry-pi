@@ -123,7 +123,7 @@ def main():
         take_picture("photo.jpg")
         scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
 
-    prev_hum = append_data("humidity", d_humi, True)
+    prev_hum = append_data("humidity", d_hum, True)
     prev_temp = append_data("temperature", d_temp, True)
     prev_soil_temp = append_data("soil_temperature", d_soil_temp, False)
     append_data("moisture", d_moist, False)
