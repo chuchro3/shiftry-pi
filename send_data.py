@@ -38,7 +38,7 @@ def append_data(filename, d, smoothen=False):
         curr = float(d)
         delta = abs(prev - curr)
         if delta > 4.0:
-            d = str(.75*curr + .25*prev)
+            d = .75*curr + .25*prev
 
     #print("writing file..")
     fr = open(_DATA_DIR + filename + ".txt", "w+")
