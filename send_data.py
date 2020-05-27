@@ -57,7 +57,7 @@ def append_data(filename, d, smoothen=False):
 
 def take_picture(filename = "photo.jpg"):
     camera = PiCamera()
-    camera.rotation = 270
+    camera.rotation = 90
     camera.start_preview()
     sleep(2)
     print("capturing photo..")
