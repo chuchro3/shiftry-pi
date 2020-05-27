@@ -119,7 +119,7 @@ def main():
         if d_hum != -1:
             break
     
-    if (time.hour == 9 and time.minute < 30):
+    if (time.hour >= 6 and time.hour <= 19):
         take_picture("photo.jpg")
         scp_cmd(pemfile, "photo.jpg", remotehost, remotedir)
 
