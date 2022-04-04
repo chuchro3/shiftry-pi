@@ -135,7 +135,7 @@ def main():
     delta_hum  = abs( float(prev_hum)  - float(d_hum)  )
     delta_temp = abs( float(prev_temp) - float(d_temp) )
     delta_soil_temp = abs( float(prev_soil_temp) - float(d_soil_temp) )
-    delay = int( max(10, 24 - delta_temp - (delta_hum / 2) - delta_soil_temp) )
+    delay = int( max(9, 24 - 1.2*delta_temp - (delta_hum / 1.9) - delta_soil_temp) )
     setHeartbeat(time + datetime.timedelta(minutes=delay))
     
     scp_cmd(pemfile, "humidity.js", remotehost, remotedir)
